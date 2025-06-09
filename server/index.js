@@ -9,7 +9,7 @@ const app = express();
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173",
+    origin: process.env.NODE_ENV === 'development' ? "http://localhost:5173" : "https://reqceptor.shawara.me",
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"]
   }
 });
@@ -17,7 +17,10 @@ const io = new Server(server, {
 const PORT = process.env.PORT || 3001;
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: process.env.NODE_ENV === 'development' ? "http://localhost:5173" : "https://reqceptor.shawara.me",
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"]
+}));
 app.use(bodyParser.json({ limit: '10mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 app.use(bodyParser.raw({ limit: '10mb', type: '*/*' }));
