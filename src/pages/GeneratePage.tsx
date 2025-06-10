@@ -3,6 +3,7 @@ import { PlusCircle, ExternalLink, Copy, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid';
 import { useWebhooks } from '../hooks/useWebhooks';
+import { config } from '../config';
 
 export default function GeneratePage() {
   const navigate = useNavigate();
@@ -34,7 +35,7 @@ export default function GeneratePage() {
   };
 
   const getWebhookUrl = (id: string) => {
-    return `${window.location.origin}/webhook/${id}`;
+    return `${config.apiUrl}/webhook/${id}`;
   };
 
   const handleDeleteWebhook = (id: string) => {
