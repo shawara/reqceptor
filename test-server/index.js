@@ -46,7 +46,7 @@ app.use((req, res, next) => {
   console.log(`Path: ${req.path}`);
   console.log('Headers:', headers);
   console.log('Query:', req.query);
-  console.log('Body:', req.body);
+  console.log('Body:', req.body.toString());
   console.log('========================\n');
   
   next();

@@ -1,92 +1,162 @@
 # Webhook Interceptor
 
-A real-time webhook testing and debugging tool that allows you to intercept, inspect, and monitor webhook requests. Built with React, Express, and Socket.IO.
+A powerful webhook inspection and debugging tool that allows you to capture, inspect, and forward HTTP requests in real-time.
 
 ## Features
 
-- 🎯 Create unique webhook endpoints for testing
-- 🔍 Real-time webhook request monitoring
-- 📝 Detailed request inspection (headers, body, query parameters)
-- 🔄 Support for all HTTP methods (GET, POST, PUT, DELETE, PATCH)
-- 📊 Request history with up to 100 most recent requests
-- 🧹 Clear request history with a single click
-- 🚀 Real-time updates using WebSocket
-- 🔒 CORS support for secure cross-origin requests
-- 🔄 Forward intercepted requests to localhost or any other endpoint
+- 🔍 **Real-time Webhook Inspection** - View incoming requests instantly
+- 🔄 **Request Forwarding** - Automatically forward requests to your development server
+- 📤 **Shareable URLs** - Share webhook inspection pages with team members
+- 🎯 **Multi-method Support** - Handles GET, POST, PUT, DELETE, and all HTTP methods
+- 💾 **Request History** - Keep track of all incoming requests
+- 🌐 **Cross-domain Support** - Deploy frontend and backend on different domains
 
-## Tech Stack
+## Quick Start
 
-- **Frontend**: React, TypeScript, TailwindCSS, Vite
-- **Backend**: Node.js, Express
-- **Real-time Communication**: Socket.IO
-- **Development**: ESLint, TypeScript, Nodemon
+### Development
 
-## Getting Started
+1. **Install dependencies:**
+   ```bash
+   npm install
+   ```
 
-### Prerequisites
+2. **Start both frontend and backend:**
+   ```bash
+   npm run dev
+   ```
 
-- Node.js (v14 or higher)
-- npm or yarn
+3. **Access the application:**
+   - Frontend: http://localhost:5173
+   - Backend API: http://localhost:3001
 
-### Installation
+### Production Deployment
 
-1. Clone the repository:
+#### Backend Configuration
+
+Set these environment variables for your backend:
+
 ```bash
-git clone https://github.com/yourusername/webhook-interceptor.git
-cd webhook-interceptor
+# Required
+PORT=3001
+FRONTEND_URL=https://your-frontend-domain.com
+
+# Optional - Multiple origins separated by commas
+ALLOWED_ORIGINS=https://your-frontend-domain.com,https://another-domain.com
 ```
 
-2. Install dependencies:
+#### Frontend Configuration
+
+Set this environment variable for your frontend:
+
 ```bash
-npm install
+VITE_API_URL=https://your-backend-domain.com
 ```
 
-3. Start the development server:
+#### Example Deployment Scenarios
+
+**Scenario 1: Same Domain**
 ```bash
-npm run dev
+# Backend (.env)
+PORT=3001
+FRONTEND_URL=https://webhook-tool.com
+ALLOWED_ORIGINS=https://webhook-tool.com
+
+# Frontend (.env)
+VITE_API_URL=https://webhook-tool.com
 ```
 
-This will start both the client (Vite) and server concurrently.
+**Scenario 2: Different Domains**
+```bash
+# Backend (.env)
+PORT=3001
+FRONTEND_URL=https://webhook-frontend.com
+ALLOWED_ORIGINS=https://webhook-frontend.com
 
-### Usage
+# Frontend (.env)
+VITE_API_URL=https://webhook-api.com
+```
 
-1. Access the web interface at `http://localhost:5173`
-2. Create a new webhook endpoint
-3. Use the provided webhook URL to send requests
-4. Monitor incoming requests in real-time
-5. Optionally forward requests to your local development server or any other endpoint
+**Scenario 3: Multiple Environments**
+```bash
+# Backend (.env)
+PORT=3001
+FRONTEND_URL=https://webhook-prod.com
+ALLOWED_ORIGINS=https://webhook-prod.com,https://webhook-staging.com,http://localhost:5173
+
+# Frontend (.env)
+VITE_API_URL=https://webhook-api.com
+```
+
+## Usage
+
+### Creating a Webhook
+
+1. Visit the application homepage
+2. Click "Generate New Webhook"
+3. Copy the generated webhook URL
+4. Use this URL in your applications or services
+
+### Sharing Webhooks
+
+Each webhook has two URLs:
+- **Webhook URL**: For receiving HTTP requests
+- **Share URL**: For viewing the webhook inspector (read-only)
 
 ### Request Forwarding
 
-The service allows you to forward intercepted webhook requests to your local development server or any other endpoint. This is particularly useful for:
-
-- Testing webhook integrations locally
-- Debugging webhook payloads in your development environment
-- Simulating production webhook scenarios in a local setup
-
-To forward requests:
-1. Configure the target URL in the web interface
-2. Enable request forwarding
-3. All incoming webhook requests will be automatically forwarded to your specified endpoint
+1. Open a webhook inspector page
+2. Click the "Forward" button
+3. Enable forwarding and enter your target URL
+4. All incoming requests will be automatically forwarded
 
 ## API Endpoints
 
-- `POST /webhook/:id` - Webhook endpoint for receiving requests
-- `GET /api/webhook/:id/requests` - Get webhook request history
-- `DELETE /api/webhook/:id/requests` - Clear webhook request history
-- `GET /health` - Health check endpoint
+### Webhook Endpoint
+```
+ALL /webhook/:id
+```
+Accepts any HTTP method and captures the request.
 
-## Development
+### Get Requests
+```
+GET /api/webhook/:id/requests
+```
+Returns all captured requests for a webhook.
 
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run lint` - Run ESLint
-- `npm run preview` - Preview production build
+### Clear Requests
+```
+DELETE /api/webhook/:id/requests
+```
+Clears all requests for a webhook.
 
-## License
+### Health Check
+```
+GET /health
+```
+Returns server status and configuration.
 
-MIT
+## Architecture
+
+- **Frontend**: React + TypeScript + Tailwind CSS
+- **Backend**: Node.js + Express + Socket.IO
+- **Real-time**: WebSocket connections for live updates
+- **Storage**: In-memory (localStorage for frontend, RAM for backend)
+
+## Security Considerations
+
+- CORS is properly configured to prevent unauthorized access
+- No sensitive data is logged or stored permanently
+- Webhook URLs are UUID-based for security through obscurity
+- Request forwarding happens client-side to maintain privacy
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request. 
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## License
+
+MIT License - see LICENSE file for details.

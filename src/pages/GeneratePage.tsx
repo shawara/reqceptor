@@ -5,6 +5,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { useWebhooks } from '../hooks/useWebhooks';
 import { config } from '../config';
 
+const API_BASE_URL = config.apiUrl;
+
 export default function GeneratePage() {
   const navigate = useNavigate();
   const { webhooks, addWebhook, deleteWebhook } = useWebhooks();
@@ -14,12 +16,9 @@ export default function GeneratePage() {
     const newWebhook = { 
       id: webhookId, 
       forwardUrl: '', 
-      isForwardingEnabled: false,
       requests: [],
       createdAt: Date.now()
     };
-    
-    console.log('Creating new webhook:', newWebhook);
     
     // Add webhook first, then navigate
     addWebhook(newWebhook);
@@ -35,7 +34,11 @@ export default function GeneratePage() {
   };
 
   const getWebhookUrl = (id: string) => {
-    return `${config.apiUrl}/webhook/${id}`;
+    return `${API_BASE_URL}/webhook/${id}`;
+  };
+
+  const getShareUrl = (id: string) => {
+    return `${window.location.origin}/v/${id}`;
   };
 
   const handleDeleteWebhook = (id: string) => {
@@ -79,20 +82,49 @@ export default function GeneratePage() {
                           {webhook.requests.length} requests
                         </span>
                       </div>
-                      <div className="bg-gray-100 rounded-md p-3 mb-3">
+                      
+                      {/* Webhook URL */}
+                      <div className="bg-gray-100 rounded-md p-3 mb-2">
                         <div className="flex items-center justify-between">
-                          <code className="text-sm font-mono text-gray-800 break-all">
-                            {getWebhookUrl(webhook.id)}
-                          </code>
+                          <div className="flex-1 min-w-0">
+                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                              Webhook URL
+                            </label>
+                            <code className="text-sm font-mono text-gray-800 break-all">
+                              {getWebhookUrl(webhook.id)}
+                            </code>
+                          </div>
                           <button
                             onClick={() => copyToClipboard(getWebhookUrl(webhook.id))}
                             className="ml-2 p-1 text-gray-400 hover:text-gray-600 transition-colors"
-                            title="Copy URL"
+                            title="Copy Webhook URL"
                           >
                             <Copy className="h-4 w-4" />
                           </button>
                         </div>
                       </div>
+
+                      {/* Share URL */}
+                      <div className="bg-blue-50 rounded-md p-3 mb-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1 min-w-0">
+                            <label className="block text-xs font-medium text-blue-700 mb-1">
+                              Share URL (View-only)
+                            </label>
+                            <code className="text-sm font-mono text-blue-800 break-all">
+                              {getShareUrl(webhook.id)}
+                            </code>
+                          </div>
+                          <button
+                            onClick={() => copyToClipboard(getShareUrl(webhook.id))}
+                            className="ml-2 p-1 text-blue-400 hover:text-blue-600 transition-colors"
+                            title="Copy Share URL"
+                          >
+                            <Copy className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+
                       <p className="text-sm text-gray-600">
                         Created {new Date(webhook.createdAt || Date.now()).toLocaleDateString()}
                       </p>
