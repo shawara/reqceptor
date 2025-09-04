@@ -9,6 +9,7 @@ export interface WebhookRequest {
 
 export interface Webhook {
   id: string;
+  name?: string;
   forwardUrl: string;
   requests: WebhookRequest[];
   createdAt?: number;

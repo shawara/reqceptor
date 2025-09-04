@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { PlusCircle, ExternalLink, Copy, Trash2, Github, Star, X } from 'lucide-react';
+import { PlusCircle, Github, Star, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid';
 import { useWebhooks } from '../hooks/useWebhooks';
 import { config } from '../config';
+import RequestItem from '../components/RequestItem';
 
 const API_BASE_URL = config.apiUrl;
 
@@ -59,12 +60,13 @@ const GitHubStarBanner = () => {
 
 export default function GeneratePage() {
   const navigate = useNavigate();
-  const { webhooks, addWebhook, deleteWebhook } = useWebhooks();
+  const { webhooks, addWebhook, deleteWebhook, updateWebhook } = useWebhooks();
 
   const generateWebhook = () => {
     const webhookId = uuidv4();
     const newWebhook = { 
       id: webhookId, 
+      name: undefined,
       forwardUrl: '', 
       requests: [],
       createdAt: Date.now()
@@ -77,18 +79,6 @@ export default function GeneratePage() {
     setTimeout(() => {
       navigate(`/v/${webhookId}`);
     }, 0);
-  };
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-  };
-
-  const getWebhookUrl = (id: string) => {
-    return `${API_BASE_URL}/webhook/${id}`;
-  };
-
-  const getShareUrl = (id: string) => {
-    return `${window.location.origin}/v/${id}`;
   };
 
   const handleDeleteWebhook = (id: string) => {
@@ -118,87 +108,16 @@ export default function GeneratePage() {
         <GitHubStarBanner />
 
         {webhooks.length > 0 && (
-          <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Your Webhooks</h2>
-            </div>
-            <div className="divide-y divide-gray-200 dark:divide-gray-700">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Your Webhooks</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {webhooks.map((webhook) => (
-                <div key={webhook.id} className="p-6 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-3 mb-2">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                          Active
-                        </span>
-                        <span className="text-sm text-gray-500 dark:text-gray-400">
-                          {webhook.requests.length} requests
-                        </span>
-                      </div>
-                      
-                      {/* Webhook URL */}
-                      <div className="bg-gray-100 dark:bg-gray-800 rounded-md p-3 mb-2">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1 min-w-0">
-                            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                              Webhook URL
-                            </label>
-                            <code className="text-sm font-mono text-gray-800 dark:text-gray-200 break-all">
-                              {getWebhookUrl(webhook.id)}
-                            </code>
-                          </div>
-                          <button
-                            onClick={() => copyToClipboard(getWebhookUrl(webhook.id))}
-                            className="ml-2 p-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-                            title="Copy Webhook URL"
-                          >
-                            <Copy className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Share URL */}
-                      <div className="bg-blue-50 dark:bg-blue-900 rounded-md p-3 mb-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1 min-w-0">
-                            <label className="block text-xs font-medium text-blue-700 dark:text-blue-200 mb-1">
-                              Share URL (View-only)
-                            </label>
-                            <code className="text-sm font-mono text-blue-800 dark:text-blue-200 break-all">
-                              {getShareUrl(webhook.id)}
-                            </code>
-                          </div>
-                          <button
-                            onClick={() => copyToClipboard(getShareUrl(webhook.id))}
-                            className="ml-2 p-1 text-blue-400 hover:text-blue-600 transition-colors"
-                            title="Copy Share URL"
-                          >
-                            <Copy className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </div>
-
-                      <p className="text-sm text-gray-600 dark:text-gray-300">
-                        Created {new Date(webhook.createdAt || Date.now()).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <div className="flex items-center space-x-2 ml-4">
-                      <button
-                        onClick={() => navigate(`/v/${webhook.id}`)}
-                        className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
-                      >
-                        <ExternalLink className="h-4 w-4 mr-1" />
-                        View
-                      </button>
-                      <button
-                        onClick={() => handleDeleteWebhook(webhook.id)}
-                        className="inline-flex items-center px-3 py-2 border border-red-300 shadow-sm text-sm leading-4 font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                <RequestItem 
+                  key={webhook.id} 
+                  webhook={webhook} 
+                  onDelete={handleDeleteWebhook}
+                  onUpdate={updateWebhook}
+                />
               ))}
             </div>
           </div>

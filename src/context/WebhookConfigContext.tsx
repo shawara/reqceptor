@@ -17,6 +17,14 @@ export interface WebhookConfigContextType {
   testForwardUrl: () => Promise<void>;
   isSaving: boolean;
   testingUrl: boolean;
+  // Webhook name editing
+  webhookName?: string;
+  isEditingName?: boolean;
+  nameValue?: string;
+  setNameValue?: (value: string) => void;
+  handleNameEdit?: () => void;
+  handleNameSave?: () => void;
+  handleNameKeyDown?: (e: React.KeyboardEvent) => void;
 }
 
 export const WebhookConfigContext = createContext<Partial<WebhookConfigContextType>>({});

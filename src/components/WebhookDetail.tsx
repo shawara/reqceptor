@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Copy, ArrowLeft, Settings, Send, ExternalLink, AlertCircle, CheckCircle, Key, Github, Star, X } from 'lucide-react';
+import { Copy, ArrowLeft, Settings, Send, ExternalLink, AlertCircle, CheckCircle, Key, Github, Star, X, Edit2, Check } from 'lucide-react';
 import { useWebhooks } from '../hooks/useWebhooks';
 import { WebhookRequest, Webhook } from '../types';
 import io, { Socket } from 'socket.io-client';
@@ -91,6 +91,9 @@ export default function WebhookDetail() {
   const [activeTab, setActiveTab] = useState<'body' | 'headers' | 'query'>('body');
   // Detect dark mode for JsonViewer
   const [isDarkMode, setIsDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
+  // State for webhook name editing
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [nameValue, setNameValue] = useState('');
 
   const webhookUrl = `${API_BASE_URL}/webhook/${id}`;
 
@@ -144,6 +147,37 @@ export default function WebhookDetail() {
     if (contentType.includes('text/html')) return 'html';
     if (contentType.includes('application/x-www-form-urlencoded')) return 'form';
     return 'text';
+  };
+
+  // Functions for webhook name editing
+  const handleNameEdit = () => {
+    setIsEditingName(true);
+  };
+
+  const handleNameSave = () => {
+    if (!id || !isOwned) return;
+    
+    const trimmedName = nameValue.trim();
+    updateWebhook(id, { name: trimmedName || undefined });
+    
+    // Update local state
+    if (webhook) {
+      setWebhook({
+        ...webhook,
+        name: trimmedName || undefined
+      });
+    }
+    
+    setIsEditingName(false);
+  };
+
+  const handleNameKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleNameSave();
+    } else if (e.key === 'Escape') {
+      setNameValue(webhook?.name || '');
+      setIsEditingName(false);
+    }
   };
 
   // Memoized forward request function
@@ -262,10 +296,14 @@ export default function WebhookDetail() {
         // Webhook exists locally - user owns it
         console.log('🔑 Loading owned webhook from local storage:', {
           id: localWebhook.id,
+          name: localWebhook.name,
           forwardUrl: localWebhook.forwardUrl,
           isForwardingEnabled: !!localWebhook.forwardUrl,
           requestCount: localWebhook.requests?.length || 0
         });
+        
+        // Set the name value for editing
+        setNameValue(localWebhook.name || '');
         
         // Fetch current requests from server to ensure we're in sync
         try {
@@ -327,6 +365,7 @@ export default function WebhookDetail() {
             // Create a minimal webhook object for viewing
             const serverWebhook: Webhook = {
               id: id,
+              name: undefined,
               forwardUrl: '',
               requests: data.requests || [],
               createdAt: Date.now() // We don't know the real creation date
@@ -613,6 +652,7 @@ export default function WebhookDetail() {
       // Create a new webhook object with the current data
       const claimedWebhook = {
         id: id,
+        name: undefined,
         forwardUrl: '',
         requests: requests,
         createdAt: Date.now()
@@ -624,6 +664,7 @@ export default function WebhookDetail() {
       // Update state
       setWebhook(claimedWebhook);
       setIsOwned(true);
+      setNameValue('');
       
       console.log('🔑 Webhook claimed:', {
         webhookId: id,
@@ -651,8 +692,28 @@ export default function WebhookDetail() {
     saveForwardingConfig,
     testForwardUrl,
     isSaving,
-    testingUrl
+    testingUrl,
+    // Add webhook name editing functionality
+    webhookName: webhook?.name || '',
+    isEditingName,
+    nameValue,
+    setNameValue,
+    handleNameEdit,
+    handleNameSave,
+    handleNameKeyDown
   };
+
+  // Debug logging
+  console.log('WebhookDetail configContextValue:', {
+    webhookName: webhook?.name,
+    webhook: webhook ? {
+      id: webhook.id,
+      name: webhook.name,
+      hasName: !!webhook.name
+    } : null,
+    isEditingName,
+    nameValue
+  });
 
   if (loading) {
     return (
@@ -693,7 +754,7 @@ export default function WebhookDetail() {
 
   return (
     <WebhookConfigProvider value={configContextValue}>
-      <Header webhookUrl={webhookUrl} />
+      <Header webhookUrl={webhookUrl} webhookName={webhook?.name || undefined} />
       
       {/* Add Claim Ownership button when viewing a webhook that's not owned */}
       {webhook && !isOwned && (
