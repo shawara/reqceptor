@@ -1,6 +1,12 @@
-# Webhook Interceptor
+# Reqceptor
+
+[![GitHub stars](https://img.shields.io/github/stars/shawara/reqceptor?style=social)](https://github.com/shawara/reqceptor)
+[![GitHub](https://img.shields.io/github/license/shawara/reqceptor)](https://github.com/shawara/reqceptor/blob/main/LICENSE)
+[![Website](https://img.shields.io/badge/website-reqceptor.site-blue)](https://reqceptor.site)
 
 A powerful webhook inspection and debugging tool that allows you to capture, inspect, and forward HTTP requests in real-time.
+
+> ⭐ If you find Reqceptor useful, please consider [giving it a star on GitHub](https://github.com/shawara/reqceptor)!
 
 ## Features
 

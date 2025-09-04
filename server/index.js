@@ -159,7 +159,8 @@ app.all('/webhook/:id', async (req, res) => {
     requestId: requestId,
     timestamp: webhookRequest.timestamp,
     method: req.method,
-    bodyLength: body ? body.length : 0
+    bodyLength: body ? body.length : 0,
+    viewUrl: `${FRONTEND_URL}/v/${webhookId}`
   });
 });
 
@@ -171,7 +172,8 @@ app.get('/api/webhook/:id/requests', (req, res) => {
   res.json({
     webhookId,
     requests,
-    count: requests.length
+    count: requests.length,
+    viewUrl: `${FRONTEND_URL}/v/${webhookId}`
   });
 });
 
@@ -185,7 +187,8 @@ app.delete('/api/webhook/:id/requests', (req, res) => {
   
   res.json({
     success: true,
-    message: 'Requests cleared successfully'
+    message: 'Requests cleared successfully',
+    viewUrl: `${FRONTEND_URL}/v/${webhookId}`
   });
 });
 
