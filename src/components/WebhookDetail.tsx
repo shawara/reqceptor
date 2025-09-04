@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Copy, ArrowLeft, Settings, Send, ExternalLink, AlertCircle, CheckCircle } from 'lucide-react';
+import { Copy, ArrowLeft, Settings, Send, ExternalLink, AlertCircle, CheckCircle, Key, Github, Star, X } from 'lucide-react';
 import { useWebhooks } from '../hooks/useWebhooks';
 import { WebhookRequest, Webhook } from '../types';
 import io, { Socket } from 'socket.io-client';
@@ -14,10 +14,61 @@ import { JsonViewer } from '@textea/json-viewer';
 
 const API_BASE_URL = config.apiUrl;
 
+// Add GitHub star banner component
+const GitHubStarBanner = () => {
+  const [isVisible, setIsVisible] = useState(true);
+  
+  // Check if banner was previously dismissed
+  useEffect(() => {
+    const dismissed = localStorage.getItem('webhook-detail-github-star-banner-dismissed');
+    if (dismissed === 'true') {
+      setIsVisible(false);
+    }
+  }, []);
+
+  const handleDismiss = () => {
+    setIsVisible(false);
+    // Store dismissal in localStorage
+    localStorage.setItem('webhook-detail-github-star-banner-dismissed', 'true');
+  };
+
+  if (!isVisible) return null;
+
+  return (
+    <div className="bg-indigo-50 dark:bg-indigo-900 p-3 flex items-center justify-between">
+      <div className="flex-1">
+        <p className="text-sm text-indigo-800 dark:text-indigo-200">
+          <span className="font-medium">Enjoying Reqceptor?</span> Please consider giving us a star on GitHub!
+        </p>
+      </div>
+      <div className="flex items-center">
+        <a
+          href="https://github.com/shawara/reqceptor"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mr-2 inline-flex items-center px-3 py-2 border border-indigo-300 shadow-sm text-sm leading-4 font-medium rounded-md text-indigo-700 dark:text-indigo-200 bg-indigo-50 dark:bg-indigo-900 hover:bg-indigo-100 dark:hover:bg-indigo-800 transition-all duration-200"
+        >
+          <Github className="h-4 w-4 mr-1" />
+          <Star className="h-3 w-3 mr-1 fill-current" />
+          Star on GitHub
+        </a>
+        <button
+          onClick={handleDismiss}
+          className="p-1 rounded-full text-indigo-500 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-800 transition-all duration-200"
+          aria-label="Dismiss"
+          title="Dismiss"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+  );
+};
+
 export default function WebhookDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getWebhook, updateWebhook } = useWebhooks();
+  const { getWebhook, updateWebhook, addWebhook, deleteWebhook } = useWebhooks();
   const [webhook, setWebhook] = useState<Webhook | null>(null);
   const [requests, setRequests] = useState<WebhookRequest[]>([]);
   const [selectedRequest, setSelectedRequest] = useState<WebhookRequest | null>(null);
@@ -387,9 +438,7 @@ export default function WebhookDetail() {
       newSocket.on('requests-cleared', () => {
         console.log('Requests cleared event received');
         setRequests([]);
-        if (isOwned && id) {
-          updateWebhook(id, { requests: [] });
-        }
+        if (isOwned && id) updateWebhook(id, { requests: [] });
       });
 
       // Handle reconnection
@@ -551,8 +600,35 @@ export default function WebhookDetail() {
   // Handler for Delete button
   const handleDelete = () => {
     if (id && isOwned && window.confirm('Are you sure you want to delete this webhook?')) {
-      updateWebhook(id, undefined);
+      deleteWebhook(id);
       navigate('/');
+    }
+  };
+
+  // Add a function to claim ownership of a webhook
+  const claimOwnership = () => {
+    if (!id || !webhook) return;
+    
+    if (window.confirm('Do you want to claim ownership of this webhook? This will allow you to configure forwarding and manage this webhook.')) {
+      // Create a new webhook object with the current data
+      const claimedWebhook = {
+        id: id,
+        forwardUrl: '',
+        requests: requests,
+        createdAt: Date.now()
+      };
+      
+      // Add to local storage
+      addWebhook(claimedWebhook);
+      
+      // Update state
+      setWebhook(claimedWebhook);
+      setIsOwned(true);
+      
+      console.log('🔑 Webhook claimed:', {
+        webhookId: id,
+        isOwned: true
+      });
     }
   };
 
@@ -618,6 +694,28 @@ export default function WebhookDetail() {
   return (
     <WebhookConfigProvider value={configContextValue}>
       <Header webhookUrl={webhookUrl} />
+      
+      {/* Add Claim Ownership button when viewing a webhook that's not owned */}
+      {webhook && !isOwned && (
+        <div className="bg-yellow-50 dark:bg-yellow-900 p-3 flex items-center justify-between">
+          <div className="flex-1">
+            <p className="text-sm text-yellow-800 dark:text-yellow-200">
+              You're viewing a shared webhook. Claim ownership to enable forwarding and configuration.
+            </p>
+          </div>
+          <button
+            onClick={claimOwnership}
+            className="ml-4 inline-flex items-center px-3 py-2 border border-yellow-300 shadow-sm text-sm leading-4 font-medium rounded-md text-yellow-700 dark:text-yellow-200 bg-yellow-50 dark:bg-yellow-900 hover:bg-yellow-100 dark:hover:bg-yellow-800 transition-all duration-200"
+          >
+            <Key className="h-4 w-4 mr-1" />
+            Claim Ownership
+          </button>
+        </div>
+      )}
+      
+      {/* Add GitHub Star banner */}
+      <GitHubStarBanner />
+      
       {/* Forwarding Config Modal */}
       {isConfigModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
