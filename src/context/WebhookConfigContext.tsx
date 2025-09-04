@@ -25,6 +25,8 @@ export interface WebhookConfigContextType {
   handleNameEdit?: () => void;
   handleNameSave?: () => void;
   handleNameKeyDown?: (e: React.KeyboardEvent) => void;
+  // Share URL
+  copyShareUrl?: () => void;
 }
 
 export const WebhookConfigContext = createContext<Partial<WebhookConfigContextType>>({});

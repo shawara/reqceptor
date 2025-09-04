@@ -1,6 +1,6 @@
 import React, { useContext } from 'react';
 import { Link } from 'react-router-dom';
-import { Webhook, Settings, Trash2, RefreshCw, Copy, Sun, Moon, Github, Star, ChevronRight, Edit2, Check } from 'lucide-react';
+import { Webhook, Settings, Trash2, RefreshCw, Copy, Sun, Moon, Github, Star, ChevronRight, Edit2, Check, Share2 } from 'lucide-react';
 import { WebhookConfigContext } from '../context/WebhookConfigContext';
 
 interface HeaderProps {
@@ -171,14 +171,26 @@ export default function Header({ webhookUrl, webhookName }: HeaderProps) {
               </>
             )}
             {webhookUrl && (
-              <button
-                onClick={handleCopy}
-                className="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-700 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200 hover:scale-105"
-                title="Copy Webhook URL"
-              >
-                <Copy className="h-4 w-4 mr-1" />
-                Webhook URL
-              </button>
+              <>
+                <button
+                  onClick={handleCopy}
+                  className="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-700 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200 hover:scale-105"
+                  title="Copy Webhook URL"
+                >
+                  <Copy className="h-4 w-4 mr-1" />
+                  Webhook URL
+                </button>
+                {config.copyShareUrl && (
+                  <button
+                    onClick={config.copyShareUrl}
+                    className="inline-flex items-center px-3 py-2 border border-blue-300 dark:border-blue-700 shadow-sm text-sm leading-4 font-medium rounded-md text-blue-700 dark:text-blue-300 bg-white dark:bg-gray-800 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all duration-200 hover:scale-105"
+                    title="Copy Share URL with name"
+                  >
+                    <Share2 className="h-4 w-4 mr-1" />
+                    Share URL
+                  </button>
+                )}
+              </>
             )}
             {/* Dark mode toggle button */}
             <button

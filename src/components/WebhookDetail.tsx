@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Copy, ArrowLeft, Settings, Send, ExternalLink, AlertCircle, CheckCircle, Key, Github, Star, X, Edit2, Check } from 'lucide-react';
 import { useWebhooks } from '../hooks/useWebhooks';
 import { WebhookRequest, Webhook } from '../types';
@@ -67,6 +67,7 @@ const GitHubStarBanner = () => {
 
 export default function WebhookDetail() {
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
   const navigate = useNavigate();
   const { getWebhook, updateWebhook, addWebhook, deleteWebhook } = useWebhooks();
   const [webhook, setWebhook] = useState<Webhook | null>(null);
@@ -94,6 +95,20 @@ export default function WebhookDetail() {
   // State for webhook name editing
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameValue, setNameValue] = useState('');
+  // State for share URL notification
+  const [showShareNotification, setShowShareNotification] = useState(false);
+
+  // Parse the name from URL query parameters
+  const urlParams = new URLSearchParams(location.search);
+  const nameFromUrl = urlParams.has('name') ? 
+    decodeURIComponent(urlParams.get('name') || '') : null;
+
+  // Debug logging for URL parameters
+  console.log('URL parameters:', {
+    search: location.search,
+    nameFromUrl,
+    hasNameParam: urlParams.has('name')
+  });
 
   const webhookUrl = `${API_BASE_URL}/webhook/${id}`;
 
@@ -147,6 +162,13 @@ export default function WebhookDetail() {
     if (contentType.includes('text/html')) return 'html';
     if (contentType.includes('application/x-www-form-urlencoded')) return 'form';
     return 'text';
+  };
+
+  // Helper function to get share URL with name
+  const getShareUrl = (webhookId: string, webhookName?: string) => {
+    const nameParam = webhookName ? 
+      `?name=${encodeURIComponent(webhookName)}` : '';
+    return `${window.location.origin}/v/${webhookId}${nameParam}`;
   };
 
   // Functions for webhook name editing
@@ -365,11 +387,16 @@ export default function WebhookDetail() {
             // Create a minimal webhook object for viewing
             const serverWebhook: Webhook = {
               id: id,
-              name: undefined,
+              name: nameFromUrl || undefined,
               forwardUrl: '',
               requests: data.requests || [],
               createdAt: Date.now() // We don't know the real creation date
             };
+            
+            // Set the name value for editing if it exists
+            if (nameFromUrl) {
+              setNameValue(nameFromUrl);
+            }
             
             setWebhook(serverWebhook);
             setIsOwned(false); // This is a shared webhook, user doesn't own it
@@ -533,6 +560,18 @@ export default function WebhookDetail() {
     navigator.clipboard.writeText(text);
   };
 
+  const copyShareUrl = () => {
+    if (!id) return;
+    const shareUrl = getShareUrl(id, webhook?.name);
+    navigator.clipboard.writeText(shareUrl);
+    
+    // Show notification
+    setShowShareNotification(true);
+    setTimeout(() => {
+      setShowShareNotification(false);
+    }, 2000);
+  };
+
   const copyFormattedBody = (body: unknown) => {
     const formatted = formatRequestBody(body);
     navigator.clipboard.writeText(formatted);
@@ -649,10 +688,13 @@ export default function WebhookDetail() {
     if (!id || !webhook) return;
     
     if (window.confirm('Do you want to claim ownership of this webhook? This will allow you to configure forwarding and manage this webhook.')) {
+      // Use name from URL if available, otherwise use the name from the webhook
+      const webhookName = nameFromUrl || webhook.name;
+      
       // Create a new webhook object with the current data
       const claimedWebhook = {
         id: id,
-        name: undefined,
+        name: webhookName, // Use the determined name
         forwardUrl: '',
         requests: requests,
         createdAt: Date.now()
@@ -664,10 +706,13 @@ export default function WebhookDetail() {
       // Update state
       setWebhook(claimedWebhook);
       setIsOwned(true);
-      setNameValue('');
+      setNameValue(webhookName || ''); // Initialize the name value with the existing name
       
       console.log('🔑 Webhook claimed:', {
         webhookId: id,
+        webhookName,
+        nameFromUrl,
+        originalName: webhook.name,
         isOwned: true
       });
     }
@@ -700,7 +745,9 @@ export default function WebhookDetail() {
     setNameValue,
     handleNameEdit,
     handleNameSave,
-    handleNameKeyDown
+    handleNameKeyDown,
+    // Share URL
+    copyShareUrl
   };
 
   // Debug logging
@@ -755,6 +802,14 @@ export default function WebhookDetail() {
   return (
     <WebhookConfigProvider value={configContextValue}>
       <Header webhookUrl={webhookUrl} webhookName={webhook?.name || undefined} />
+      
+      {/* Share URL copied notification */}
+      {showShareNotification && (
+        <div className="fixed top-16 left-1/2 transform -translate-x-1/2 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-4 py-2 rounded-md shadow-md flex items-center z-50 animate-fade-in">
+          <CheckCircle className="h-4 w-4 mr-2" />
+          Share URL copied to clipboard!
+        </div>
+      )}
       
       {/* Add Claim Ownership button when viewing a webhook that's not owned */}
       {webhook && !isOwned && (

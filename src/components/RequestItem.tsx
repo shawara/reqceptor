@@ -22,7 +22,10 @@ const RequestItem: React.FC<RequestItemProps> = ({ webhook, onDelete, onUpdate }
   };
 
   const getShareUrl = (id: string) => {
-    return `${window.location.origin}/v/${id}`;
+    // Create a URL-friendly version of the name
+    const nameParam = webhook.name ? 
+      `?name=${encodeURIComponent(webhook.name)}` : '';
+    return `${window.location.origin}/v/${id}${nameParam}`;
   };
 
   const copyToClipboard = (text: string) => {
