@@ -719,7 +719,7 @@ export default function WebhookDetail() {
       {/* Forwarding Config Modal */}
       {isConfigModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg max-w-md w-full p-6 relative animate-fade-in">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg max-w-xl w-full p-6 relative animate-fade-in">
             <button
               onClick={closeConfigModal}
               className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 text-xl font-bold"
@@ -738,16 +738,16 @@ export default function WebhookDetail() {
                   className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded mt-1"
                 />
                 <div className="text-sm">
-                  <label htmlFor="enableForwardingModal" className="font-medium text-gray-900 cursor-pointer">
+                  <label htmlFor="enableForwardingModal" className="font-medium text-gray-900 dark:text-gray-100 cursor-pointer">
                     Enable automatic raw request forwarding
                   </label>
-                  <p className="text-gray-600 mt-0.5 text-xs">
+                  <p className="text-gray-600 dark:text-gray-400 mt-0.5 text-xs">
                     Forward all incoming webhook requests to your development server in real-time
                   </p>
                 </div>
               </div>
               <div>
-                <label htmlFor="forwardUrlModal" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label htmlFor="forwardUrlModal" className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                   Forward URL
                 </label>
                 <div className="flex space-x-2">
@@ -762,7 +762,7 @@ export default function WebhookDetail() {
                   <button
                     onClick={testForwardUrl}
                     disabled={!forwardUrl || testingUrl}
-                    className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {testingUrl ? (
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-1"></div>
@@ -773,10 +773,10 @@ export default function WebhookDetail() {
                   </button>
                 </div>
               </div>
-              <div className="p-2 bg-green-50 border border-green-200 rounded-md">
+              <div className="p-2 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-md">
                 <div className="flex">
-                  <AlertCircle className="h-4 w-4 text-green-400 mr-2 flex-shrink-0 mt-0.5" />
-                  <div className="text-xs text-green-800">
+                  <AlertCircle className="h-4 w-4 text-green-400 dark:text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+                  <div className="text-xs text-green-800 dark:text-green-300">
                     <p className="font-medium mb-1">Raw Request Forwarding Features</p>
                     <ul className="list-disc list-inside space-y-0.5">
                       <li><strong>Preserves original body exactly</strong> - no JSON parsing or modification</li>
@@ -791,7 +791,7 @@ export default function WebhookDetail() {
               <div className="flex justify-end space-x-3 pt-2 border-t border-blue-200 mt-4">
                 <button
                   onClick={closeConfigModal}
-                  className="px-3 py-1.5 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                  className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
                 >
                   Cancel
                 </button>
