@@ -1,6 +1,6 @@
 import React, { useContext } from 'react';
 import { Link } from 'react-router-dom';
-import { Webhook, Settings, Trash2, RefreshCw, Copy, Sun, Moon, Github, Star, ChevronRight, Edit2, Check, Share2 } from 'lucide-react';
+import { Webhook, Settings, Trash2, RefreshCw, Copy, Sun, Moon, ChevronRight, Edit2, Check, Share2 } from 'lucide-react';
 import { WebhookConfigContext } from '../context/WebhookConfigContext';
 
 interface HeaderProps {
@@ -67,7 +67,7 @@ export default function Header({ webhookUrl, webhookName }: HeaderProps) {
             <Link to="/" className="flex items-center">
               <Webhook className="h-8 w-8 text-indigo-600" />
               <span className="ml-2 text-xl font-bold text-gray-900 dark:text-gray-100">
-                Reqceptor
+                Hooki
               </span>
             </Link>
             {(displayName !== undefined || canEditName) && (
@@ -112,17 +112,6 @@ export default function Header({ webhookUrl, webhookName }: HeaderProps) {
             )}
           </div>
           <nav className="flex items-center space-x-2">
-            <a 
-              href="https://github.com/shawara/reqceptor"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-700 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200 hover:scale-105"
-              title="Star us on GitHub"
-            >
-              <Github className="h-4 w-4 mr-1" />
-              <Star className="h-3 w-3 mr-1 fill-current" />
-              Star
-            </a>
             <Link
               to="/"
               className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 px-3 py-2 rounded-md text-sm font-medium"
@@ -154,20 +143,24 @@ export default function Header({ webhookUrl, webhookName }: HeaderProps) {
                     </span>
                   )}
                 </button>
-                <button
-                  onClick={config.onClear}
-                  className="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-700 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200 hover:scale-105"
-                >
-                  <RefreshCw className="h-4 w-4 mr-1" />
-                  Clear
-                </button>
-                <button
-                  onClick={config.onDelete}
-                  className="inline-flex items-center px-3 py-2 border border-red-300 dark:border-red-700 shadow-sm text-sm leading-4 font-medium rounded-md text-red-700 dark:text-red-300 bg-white dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900 transition-all duration-200 hover:scale-105"
-                >
-                  <Trash2 className="h-4 w-4 mr-1" />
-                  Delete
-                </button>
+                {config.isOwned && (
+                  <>
+                    <button
+                      onClick={config.onClear}
+                      className="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-700 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200 hover:scale-105"
+                    >
+                      <RefreshCw className="h-4 w-4 mr-1" />
+                      Clear
+                    </button>
+                    <button
+                      onClick={config.onDelete}
+                      className="inline-flex items-center px-3 py-2 border border-red-300 dark:border-red-700 shadow-sm text-sm leading-4 font-medium rounded-md text-red-700 dark:text-red-300 bg-white dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900 transition-all duration-200 hover:scale-105"
+                    >
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Delete
+                    </button>
+                  </>
+                )}
               </>
             )}
             {webhookUrl && (
@@ -184,11 +177,11 @@ export default function Header({ webhookUrl, webhookName }: HeaderProps) {
                   <button
                     onClick={config.copyShareUrl}
                     className="inline-flex items-center px-3 py-2 border border-blue-300 dark:border-blue-700 shadow-sm text-sm leading-4 font-medium rounded-md text-blue-700 dark:text-blue-300 bg-white dark:bg-gray-800 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all duration-200 hover:scale-105"
-                    title="Copy Share URL with name"
-                  >
-                    <Share2 className="h-4 w-4 mr-1" />
-                    Share URL
-                  </button>
+                    title="Copy share URL (includes local browser forwarding config)"
+                    >
+                      <Share2 className="h-4 w-4 mr-1" />
+                      Share URL
+                    </button>
                 )}
               </>
             )}

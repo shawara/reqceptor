@@ -3,6 +3,7 @@ import { Copy, ExternalLink, Trash2, Clock, Hash, ArrowRight, Edit2, Check } fro
 import { Webhook } from '../types';
 import { useNavigate } from 'react-router-dom';
 import { config } from '../config';
+import { buildShareUrl } from '../utils/shareConfig';
 
 interface RequestItemProps {
   webhook: Webhook;
@@ -21,11 +22,12 @@ const RequestItem: React.FC<RequestItemProps> = ({ webhook, onDelete, onUpdate }
     return `${API_BASE_URL}/webhook/${id}`;
   };
 
-  const getShareUrl = (id: string) => {
-    // Create a URL-friendly version of the name
-    const nameParam = webhook.name ? 
-      `?name=${encodeURIComponent(webhook.name)}` : '';
-    return `${window.location.origin}/v/${id}${nameParam}`;
+  const getShareUrl = (webhookId: string) => {
+    return buildShareUrl(window.location.origin, webhookId, {
+      name: webhook.name,
+      forwardUrl: webhook.forwardUrl || undefined,
+      forwardEnabled: Boolean(webhook.forwardUrl)
+    });
   };
 
   const copyToClipboard = (text: string) => {
@@ -124,7 +126,7 @@ const RequestItem: React.FC<RequestItemProps> = ({ webhook, onDelete, onUpdate }
           )}
         </div>
         
-        {/* Request count and badge */}
+        {/* Request count */}
         <div className="mb-4">
           <div className="flex items-center">
             <span className="text-lg font-semibold text-gray-900 dark:text-gray-100 mr-2">

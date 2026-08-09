@@ -2,6 +2,36 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Default Tailwind gray (light mode) */
+:root {
+  --color-gray-50: 249 250 251;
+  --color-gray-100: 243 244 246;
+  --color-gray-200: 229 231 235;
+  --color-gray-300: 209 213 219;
+  --color-gray-400: 156 163 175;
+  --color-gray-500: 107 114 128;
+  --color-gray-600: 75 85 99;
+  --color-gray-700: 55 65 81;
+  --color-gray-800: 31 41 55;
+  --color-gray-900: 17 24 39;
+  --color-gray-950: 3 7 18;
+}
+
+/* Cursor Dark Anysphere — surfaces + text only */
+.dark {
+  --color-gray-50: 240 240 240;
+  --color-gray-100: 228 228 228; /* #E4E4E4 primary text */
+  --color-gray-200: 208 208 208;
+  --color-gray-300: 176 176 176;
+  --color-gray-400: 138 138 138; /* secondary text */
+  --color-gray-500: 107 107 107; /* muted */
+  --color-gray-600: 43 43 43; /* #2b2b2b borders */
+  --color-gray-700: 31 31 31; /* #1f1f1f elevated / hover */
+  --color-gray-800: 24 24 24; /* #181818 panels */
+  --color-gray-900: 20 20 20; /* #141414 page / chrome */
+  --color-gray-950: 15 15 15;
+}
+
 @keyframes fade-in {
   from {
     opacity: 0;

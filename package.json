@@ -1,5 +1,5 @@
 {
-  "name": "webhook-interceptor",
+  "name": "hooki",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -22,6 +22,7 @@
     "react-dom": "^18.3.1",
     "react-json-tree": "^0.20.0",
     "react-router-dom": "^6.22.3",
+    "redis": "^6.2.0",
     "socket.io": "^4.7.4",
     "socket.io-client": "^4.7.4",
     "uuid": "^9.0.1"

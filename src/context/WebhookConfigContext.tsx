@@ -2,6 +2,7 @@ import { createContext } from 'react';
 
 export interface WebhookConfigContextType {
   showConfigButtons: boolean;
+  isOwned?: boolean;
   isConnected: boolean;
   isForwardingEnabled: boolean;
   onForwardClick: () => void;

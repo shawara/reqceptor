@@ -1,12 +1,12 @@
-# Reqceptor
+# Hooki
 
-[![GitHub stars](https://img.shields.io/github/stars/shawara/reqceptor?style=social)](https://github.com/shawara/reqceptor)
-[![GitHub](https://img.shields.io/github/license/shawara/reqceptor)](https://github.com/shawara/reqceptor/blob/main/LICENSE)
-[![Website](https://img.shields.io/badge/website-reqceptor.site-blue)](https://reqceptor.site)
+[![GitHub stars](https://img.shields.io/github/stars/shawara/hooki?style=social)](https://github.com/shawara/hooki)
+[![GitHub](https://img.shields.io/github/license/shawara/hooki)](https://github.com/shawara/hooki/blob/main/LICENSE)
+[![Website](https://img.shields.io/badge/website-hooki.site-blue)](https://hooki.site)
 
 A powerful webhook inspection and debugging tool that allows you to capture, inspect, and forward HTTP requests in real-time.
 
-> ⭐ If you find Reqceptor useful, please consider [giving it a star on GitHub](https://github.com/shawara/reqceptor)!
+> ⭐ If you find Hooki useful, please consider [giving it a star on GitHub](https://github.com/shawara/hooki)!
 
 ## Features
 

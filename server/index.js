@@ -4,6 +4,7 @@ import { Server } from 'socket.io';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import { v4 as uuidv4 } from 'uuid';
+import { createStore, defaultForwardingConfig } from './store.js';
 
 const app = express();
 const server = createServer(app);
@@ -11,8 +12,8 @@ const server = createServer(app);
 // Get configuration from environment variables
 const PORT = process.env.PORT || 3001;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
-const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS 
-  ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
+const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',').map((origin) => origin.trim())
   : [FRONTEND_URL, 'http://localhost:5173', 'http://localhost:3000'];
 
 console.log('🔧 Configuration:');
@@ -22,42 +23,134 @@ console.log('   Allowed Origins:', ALLOWED_ORIGINS);
 const io = new Server(server, {
   cors: {
     origin: ALLOWED_ORIGINS,
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     credentials: true
   }
 });
 
-// Store webhook requests in memory (in production, use a database)
-const webhookRequests = new Map();
+const MAX_FORWARD_URLS = 50;
+const SKIP_FORWARD_HEADERS = new Set([
+  'host',
+  'content-length',
+  'connection',
+  'transfer-encoding',
+  'upgrade',
+  'keep-alive',
+  'proxy-connection',
+  'sec-websocket-key',
+  'sec-websocket-version',
+  'sec-websocket-extensions'
+]);
 
-// Socket.io connection handling
+/** @type {Awaited<ReturnType<typeof createStore>> | null} */
+let store = null;
+
+function isBlockedServerForwardHost(hostname) {
+  const host = (hostname || '').toLowerCase().replace(/^\[|\]$/g, '');
+  if (!host) return true;
+  if (host === 'localhost' || host === '127.0.0.1' || host === '::1') return true;
+  if (host.endsWith('.local')) return true;
+  return false;
+}
+
+function validateForwardingConfig(body) {
+  const serverEnabled = Boolean(body?.serverEnabled ?? body?.enabled);
+  const urls = Array.isArray(body?.urls)
+    ? body.urls.map((u) => String(u).trim()).filter(Boolean)
+    : [];
+
+  if (urls.length > MAX_FORWARD_URLS) {
+    return { error: `Maximum ${MAX_FORWARD_URLS} forward URLs allowed` };
+  }
+
+  const normalized = [];
+  for (const url of urls) {
+    let parsed;
+    try {
+      parsed = new URL(url);
+    } catch {
+      return { error: `Invalid URL: ${url}` };
+    }
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return { error: `Only http/https allowed: ${url}` };
+    }
+    if (isBlockedServerForwardHost(parsed.hostname)) {
+      return { error: `Server destinations cannot use localhost/private host: ${url}` };
+    }
+    normalized.push(parsed.toString());
+  }
+
+  return {
+    config: {
+      serverEnabled,
+      urls: normalized
+    }
+  };
+}
+
+function buildForwardHeaders(headers, webhookId, request) {
+  const out = {};
+  Object.entries(headers || {}).forEach(([key, value]) => {
+    if (SKIP_FORWARD_HEADERS.has(String(key).toLowerCase())) return;
+    out[key] = Array.isArray(value) ? value[0] : String(value);
+  });
+  out['X-Forwarded-By'] = 'Webhook-Interceptor';
+  out['X-Original-Webhook-Id'] = webhookId;
+  out['X-Original-Timestamp'] = String(request.timestamp);
+  out['X-Original-Method'] = request.method;
+  return out;
+}
+
+async function forwardToUrl(targetUrl, request, webhookId) {
+  const headers = buildForwardHeaders(request.headers, webhookId, request);
+  const init = {
+    method: request.method,
+    headers,
+    redirect: 'manual'
+  };
+
+  if (request.method !== 'GET' && request.method !== 'HEAD' && request.body != null) {
+    init.body = typeof request.body === 'string' ? request.body : JSON.stringify(request.body);
+  }
+
+  const res = await fetch(targetUrl, init);
+  console.log(`↪️  Forward ${request.method} → ${targetUrl} status=${res.status}`);
+}
+
+async function scheduleServerForwards(webhookId, request) {
+  const config = (await store.getForwarding(webhookId)) || defaultForwardingConfig();
+  if (!config.serverEnabled || !config.urls.length) return;
+
+  for (const url of config.urls) {
+    forwardToUrl(url, request, webhookId).catch((err) => {
+      console.error(`❌ Forward failed → ${url}:`, err?.message || err);
+    });
+  }
+}
+
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
-  
+
   socket.on('join-webhook', (webhookId) => {
     socket.join(`webhook-${webhookId}`);
     console.log(`Client joined webhook room: webhook-${webhookId}`);
   });
-  
+
   socket.on('disconnect', () => {
     console.log('Client disconnected:', socket.id);
   });
 });
 
-// CORS middleware for webhook endpoints - allow all origins and headers
 app.use('/webhook', cors({
-  origin: true, // Allow all origins for webhooks
-  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"],
-  allowedHeaders: '*', // Allow all headers for webhooks
-  credentials: false // Don't require credentials for webhooks
+  origin: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'],
+  allowedHeaders: '*',
+  credentials: false
 }));
 
-// CORS middleware for API endpoints - restrict to allowed origins
 app.use('/api', cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
-    
     if (ALLOWED_ORIGINS.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
@@ -68,7 +161,6 @@ app.use('/api', cors({
   credentials: true
 }));
 
-// Add request logging middleware for webhooks
 app.use('/webhook', (req, res, next) => {
   console.log(`🔗 Webhook request: ${req.method} ${req.url}`);
   console.log(`   Origin: ${req.headers.origin || 'none'}`);
@@ -77,36 +169,31 @@ app.use('/webhook', (req, res, next) => {
   next();
 });
 
-// Custom middleware to capture raw body for webhooks
 app.use('/webhook', (req, res, next) => {
   let data = '';
   req.setEncoding('utf8');
-  
+
   req.on('data', (chunk) => {
     data += chunk;
   });
-  
+
   req.on('end', () => {
     req.rawBody = data;
     next();
   });
 });
 
-// Body parsing middleware for API routes only
 app.use('/api', bodyParser.json({ limit: '10mb' }));
 app.use('/api', bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 
-// Webhook endpoint - accepts all HTTP methods
 app.all('/webhook/:id', async (req, res) => {
   const webhookId = req.params.id;
   const requestId = uuidv4();
-  
+
   console.log(`📨 Processing webhook ${webhookId} - ${req.method} request`);
-  
-  // Use raw body captured by our custom middleware
+
   let body = req.rawBody || null;
-  
-  // If no raw body but we have a parsed body from other middleware, use that
+
   if (!body && req.body !== undefined) {
     if (typeof req.body === 'object') {
       body = JSON.stringify(req.body);
@@ -114,12 +201,12 @@ app.all('/webhook/:id', async (req, res) => {
       body = String(req.body);
     }
   }
-  
+
   const webhookRequest = {
     id: requestId,
     method: req.method,
     headers: req.headers,
-    body: body, // Always a string or null
+    body,
     query: req.query,
     params: req.params,
     timestamp: Date.now(),
@@ -127,48 +214,38 @@ app.all('/webhook/:id', async (req, res) => {
     originalUrl: req.originalUrl,
     contentType: req.headers['content-type'] || 'unknown'
   };
-  
-  // Store the request
-  if (!webhookRequests.has(webhookId)) {
-    webhookRequests.set(webhookId, []);
-  }
-  
-  const requests = webhookRequests.get(webhookId);
-  requests.unshift(webhookRequest); // Add to beginning
-  
-  // Keep only last 100 requests per webhook
-  if (requests.length > 100) {
-    requests.splice(100);
-  }
-  
-  // Emit to connected clients for this webhook
+
+  await store.prependRequest(webhookId, webhookRequest);
+
   io.to(`webhook-${webhookId}`).emit('webhook-request', webhookRequest);
-  
+
   console.log(`✅ Webhook ${webhookId} processed successfully - Body length: ${body ? body.length : 0}`);
-  
-  // Send response with CORS headers
+
   res.set({
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD',
     'Access-Control-Allow-Headers': '*'
   });
-  
+
   res.status(200).json({
     success: true,
     message: 'Webhook received successfully',
-    requestId: requestId,
+    requestId,
     timestamp: webhookRequest.timestamp,
     method: req.method,
     bodyLength: body ? body.length : 0,
     viewUrl: `${FRONTEND_URL}/v/${webhookId}`
   });
+
+  scheduleServerForwards(webhookId, webhookRequest).catch((err) => {
+    console.error('Server forward scheduling failed:', err?.message || err);
+  });
 });
 
-// API endpoint to get webhook requests
-app.get('/api/webhook/:id/requests', (req, res) => {
+app.get('/api/webhook/:id/requests', async (req, res) => {
   const webhookId = req.params.id;
-  const requests = webhookRequests.get(webhookId) || [];
-  
+  const requests = await store.getRequests(webhookId);
+
   res.json({
     webhookId,
     requests,
@@ -177,14 +254,52 @@ app.get('/api/webhook/:id/requests', (req, res) => {
   });
 });
 
-// API endpoint to clear webhook requests
-app.delete('/api/webhook/:id/requests', (req, res) => {
+app.get('/api/webhook/:id/forwarding', async (req, res) => {
+  const config = await store.getForwarding(req.params.id);
+  res.json({ webhookId: req.params.id, ...config });
+});
+
+app.put('/api/webhook/:id/forwarding', async (req, res) => {
+  const result = validateForwardingConfig(req.body);
+  if (result.error) {
+    return res.status(400).json({ success: false, error: result.error });
+  }
+  await store.setForwarding(req.params.id, result.config);
+  res.json({ success: true, webhookId: req.params.id, ...result.config });
+});
+
+app.post('/api/webhook/:id/forwarding/replay', async (req, res) => {
   const webhookId = req.params.id;
-  webhookRequests.set(webhookId, []);
-  
-  // Notify connected clients
+  const config = await store.getForwarding(webhookId);
+
+  if (!config.urls.length) {
+    return res.status(400).json({
+      success: false,
+      error: 'No server forward URLs configured for this webhook'
+    });
+  }
+
+  const requests = await store.getRequests(webhookId);
+  const request = req.body?.request || requests.find((r) => r.id === req.body?.requestId);
+  if (!request) {
+    return res.status(404).json({ success: false, error: 'Request not found' });
+  }
+
+  for (const url of config.urls) {
+    forwardToUrl(url, request, webhookId).catch((err) => {
+      console.error(`❌ Replay forward failed → ${url}:`, err?.message || err);
+    });
+  }
+
+  res.json({ success: true, forwardedTo: config.urls.length });
+});
+
+app.delete('/api/webhook/:id/requests', async (req, res) => {
+  const webhookId = req.params.id;
+  await store.clearRequests(webhookId);
+
   io.to(`webhook-${webhookId}`).emit('requests-cleared');
-  
+
   res.json({
     success: true,
     message: 'Requests cleared successfully',
@@ -192,20 +307,22 @@ app.delete('/api/webhook/:id/requests', (req, res) => {
   });
 });
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
+app.get('/health', async (req, res) => {
+  const stats = await store.stats();
+  res.json({
+    status: 'ok',
     timestamp: new Date().toISOString(),
-    activeWebhooks: webhookRequests.size,
+    storage: store.type,
+    activeWebhooks: stats.activeWebhooks,
+    forwardingConfigs: stats.forwardingConfigs,
     config: {
       frontendUrl: FRONTEND_URL,
-      allowedOrigins: ALLOWED_ORIGINS
+      allowedOrigins: ALLOWED_ORIGINS,
+      redisConfigured: Boolean(process.env.REDIS_URL?.trim())
     }
   });
 });
 
-// Catch-all for webhook testing
 app.get('/webhook-test', (req, res) => {
   res.json({
     message: 'Webhook server is running',
@@ -215,20 +332,31 @@ app.get('/webhook-test', (req, res) => {
   });
 });
 
-// Start server
-server.listen(PORT, () => {
-  console.log(`🚀 Webhook Interceptor Server running on port ${PORT}`);
-  console.log(`📡 WebSocket server ready for connections`);
-  console.log(`🔗 Webhook endpoint: http://localhost:${PORT}/webhook/{id}`);
-  console.log(`🧪 Test endpoint: http://localhost:${PORT}/webhook-test`);
-  console.log(`💊 Health check: http://localhost:${PORT}/health`);
+async function start() {
+  store = await createStore();
+
+  server.listen(PORT, () => {
+    console.log(`🚀 Webhook Interceptor Server running on port ${PORT}`);
+    console.log(`📡 WebSocket server ready for connections`);
+    console.log(`🔗 Webhook endpoint: http://localhost:${PORT}/webhook/{id}`);
+    console.log(`🧪 Test endpoint: http://localhost:${PORT}/webhook-test`);
+    console.log(`💊 Health check: http://localhost:${PORT}/health`);
+  });
+}
+
+start().catch((err) => {
+  console.error('Failed to start server:', err);
+  process.exit(1);
 });
 
-// Graceful shutdown
-process.on('SIGTERM', () => {
+process.on('SIGTERM', async () => {
   console.log('SIGTERM received, shutting down gracefully');
-  server.close(() => {
-    console.log('Server closed');
-    process.exit(0);
-  });
+  try {
+    if (store) await store.close();
+  } finally {
+    server.close(() => {
+      console.log('Server closed');
+      process.exit(0);
+    });
+  }
 });
