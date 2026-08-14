@@ -25,10 +25,19 @@ const io = new Server(server, {
     origin: ALLOWED_ORIGINS,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     credentials: true
-  }
+  },
+  // Fewer heartbeats / prefer websocket to cut Render egress on free tier
+  transports: ['websocket', 'polling'],
+  pingInterval: 60000,
+  pingTimeout: 30000,
+  maxHttpBufferSize: 1e5
 });
 
-const MAX_FORWARD_URLS = 50;
+const MAX_FORWARD_URLS = Math.min(
+  50,
+  Math.max(1, Number.parseInt(process.env.MAX_FORWARD_URLS || '50', 10) || 50)
+);
+const MAX_HEADER_VALUE_CHARS = 2048;
 const SKIP_FORWARD_HEADERS = new Set([
   'host',
   'content-length',
@@ -45,12 +54,24 @@ const SKIP_FORWARD_HEADERS = new Set([
 /** @type {Awaited<ReturnType<typeof createStore>> | null} */
 let store = null;
 
+function slimHeaders(headers) {
+  const out = {};
+  for (const [key, value] of Object.entries(headers || {})) {
+    const raw = Array.isArray(value) ? value.join(', ') : String(value);
+    out[key] =
+      raw.length > MAX_HEADER_VALUE_CHARS
+        ? `${raw.slice(0, MAX_HEADER_VALUE_CHARS)}…[truncated]`
+        : raw;
+  }
+  return out;
+}
+
 function isBlockedServerForwardHost(hostname) {
   const host = (hostname || '').toLowerCase().replace(/^\[|\]$/g, '');
   if (!host) return true;
   if (host === 'localhost' || host === '127.0.0.1' || host === '::1') return true;
-  if (host.endsWith('.local')) return true;
-  return false;
+  return host.endsWith('.local');
+
 }
 
 function validateForwardingConfig(body) {
@@ -162,14 +183,6 @@ app.use('/api', cors({
 }));
 
 app.use('/webhook', (req, res, next) => {
-  console.log(`🔗 Webhook request: ${req.method} ${req.url}`);
-  console.log(`   Origin: ${req.headers.origin || 'none'}`);
-  console.log(`   User-Agent: ${req.headers['user-agent'] || 'none'}`);
-  console.log(`   Content-Type: ${req.headers['content-type'] || 'none'}`);
-  next();
-});
-
-app.use('/webhook', (req, res, next) => {
   let data = '';
   req.setEncoding('utf8');
 
@@ -190,8 +203,6 @@ app.all('/webhook/:id', async (req, res) => {
   const webhookId = req.params.id;
   const requestId = uuidv4();
 
-  console.log(`📨 Processing webhook ${webhookId} - ${req.method} request`);
-
   let body = req.rawBody || null;
 
   if (!body && req.body !== undefined) {
@@ -205,21 +216,17 @@ app.all('/webhook/:id', async (req, res) => {
   const webhookRequest = {
     id: requestId,
     method: req.method,
-    headers: req.headers,
+    headers: slimHeaders(req.headers),
     body,
     query: req.query,
-    params: req.params,
     timestamp: Date.now(),
     url: req.url,
-    originalUrl: req.originalUrl,
     contentType: req.headers['content-type'] || 'unknown'
   };
 
   await store.prependRequest(webhookId, webhookRequest);
 
   io.to(`webhook-${webhookId}`).emit('webhook-request', webhookRequest);
-
-  console.log(`✅ Webhook ${webhookId} processed successfully - Body length: ${body ? body.length : 0}`);
 
   res.set({
     'Access-Control-Allow-Origin': '*',
@@ -233,7 +240,7 @@ app.all('/webhook/:id', async (req, res) => {
     requestId,
     timestamp: webhookRequest.timestamp,
     method: req.method,
-    bodyLength: body ? body.length : 0,
+    bodyLength: body ? Buffer.byteLength(body, 'utf8') : 0,
     viewUrl: `${FRONTEND_URL}/v/${webhookId}`
   });
 
@@ -318,7 +325,9 @@ app.get('/health', async (req, res) => {
     config: {
       frontendUrl: FRONTEND_URL,
       allowedOrigins: ALLOWED_ORIGINS,
-      redisConfigured: Boolean(process.env.REDIS_URL?.trim())
+      redisConfigured: Boolean(process.env.REDIS_URL?.trim()),
+      requestsRedis: /^(true|1|yes)$/i.test(process.env.REQUESTS_REDIS?.trim() || ''),
+      forwardingRedis: /^(true|1|yes)$/i.test(process.env.FORWARDING_REDIS?.trim() || '')
     }
   });
 });
